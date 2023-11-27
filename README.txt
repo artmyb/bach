@@ -1,4 +1,6 @@
-Note class:
+Note class for python:
+
+move bach.py to your main directory, import the class by "from bach import Note"
 key is MIDI note number.
 name is the note name followed by octave placement on the piano.
 (the first A note on the piano is A0, the first C note on the piano is A1.)
