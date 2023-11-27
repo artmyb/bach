@@ -20,6 +20,19 @@ class Note:
 
     note_names = CircularList(("C","C#","D","Eb","E","F","F#","G","G#","A","Bb","B"))
 
+    @staticmethod
+    def bykey(key):
+        octave = key//12 -1
+        index = key % 12
+        name_set = Note.note_names[index]
+        name = name_set+str(octave)
+        return Note(name)
+
+    @staticmethod
+    def byfreq(frequency):
+        key = 69+12*np.log(frequency/440)/np.log(2)
+        return Note.bykey(round(key))
+
     def __init__(self,name,duration=1,dynamic=0.25,timbre=[1]+50*[0]):
         self.name = name
         self.duration = duration
@@ -350,7 +363,6 @@ class Note:
         sd.wait()
 
 
-
 my_timbre = [1,1,2,0.1,0.5,0.1,0.3,0.05]
 note1 = Note("Bb3",dynamic = 1,duration=1,timbre=my_timbre)
 
@@ -377,6 +389,7 @@ tune_of_tuba_mirum = [3*note1,
                       note1.dominant(which=1),
                       note1.subdominant(which=1),
                       3*note1.M(1)]
+
 
 for i in tune_of_tuba_mirum:
     print(i.name)
