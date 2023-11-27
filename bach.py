@@ -7,6 +7,8 @@
 # timbre is a list of relative amplitudes of harmonics. The default timbre [1,0,0,0,0,0,...] represents a sine wave.
 
 import numpy as np
+import sounddevice as sd
+
 
 class Note:
     class CircularList(list):
@@ -18,9 +20,9 @@ class Note:
 
     note_names = CircularList(("C","C#","D","Eb","E","F","F#","G","G#","A","Bb","B"))
 
-    def __init__(self,name,length=1,dynamic=0.25,timbre=[1]+50*[0]):
+    def __init__(self,name,duration=1,dynamic=0.25,timbre=[1]+50*[0]):
         self.name = name
-        self.length = length
+        self.duration = duration
         self.dynamic = dynamic
         self.timbre = timbre
         self.octave_digits = 0
@@ -31,6 +33,9 @@ class Note:
             except:
                 pass
         self.octave = self.name[-self.octave_digits:]
+        if len(self.timbre) < 50:
+            while len(self.timbre) < 50:
+                self.timbre.append(0)
 
     def note_set(self):
         unique_note = self.name.replace(self.octave, "")
@@ -50,7 +55,11 @@ class Note:
         new_note_key = self.key() + semitone
         new_note_octave = new_note_key//12 - 1
         new_note_set = Note.note_names[self.note_index()+semitone-12]
-        return Note(new_note_set+str(new_note_octave))
+        return Note(new_note_set+str(new_note_octave),duration=self.duration,dynamic=self.dynamic,timbre=self.timbre)
+
+    def change_duration(self,new_duration):
+        return Note(self.name, duration=new_duration, dynamic=self.dynamic,
+                    timbre=self.timbre)
 
     def dominant(self,which = 0):
         return self.add(-5+which*12)
@@ -266,5 +275,51 @@ class Note:
             elif difference == 11:
                 return self.mixolydian_scale(degree=add, mode=scale.split()[0])
 
+    def play(self,tempo = 120, sample_rate=44100):
+        time = np.arange(0,(self.duration*60/tempo),1/sample_rate)
+        audio = np.array(time.size*[0], dtype=np.int16)
+        for i in range(len(self.timbre)):
+            audio = audio + self.timbre[i]*np.sin((i+1)*self.frequency()*2*np.pi*time)
+        audio = self.dynamic*audio
 
 
+
+        sd.play(audio, samplerate=44100)
+
+
+my_timbre = [1,0.5,0.1,0.1,0.1,0.3,0.05]
+note1 = Note("F#4",dynamic = 0.5,timbre=my_timbre)
+
+#tune of symphony no.9 down there
+
+note1.play()
+note1.play()
+note1.add(1).play()
+note1.add(3).play()
+note1.add(3).play()
+note1.add(1).play()
+note1.add(0).play()
+note1.add(-2).play()
+note1.add(-4).play()
+note1.add(-4).play()
+note1.add(-2).play()
+note1.add(0).play()
+note1.add(0).change_duration(1.5).play()
+note1.add(-2).change_duration(0.5).play()
+note1.add(-2).change_duration(2).play()
+
+note1.play()
+note1.play()
+note1.add(1).play()
+note1.add(3).play()
+note1.add(3).play()
+note1.add(1).play()
+note1.add(0).play()
+note1.add(-2).play()
+note1.add(-4).play()
+note1.add(-4).play()
+note1.add(-2).play()
+note1.add(0).play()
+note1.add(-2).change_duration(1.5).play()
+note1.add(-4).change_duration(0.5).play()
+note1.add(-4).change_duration(2).play()
