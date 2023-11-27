@@ -32,3 +32,6 @@ note2 = Note("E5")
 >7
 >print(note1.add_in_scale(3,tonal_center = "F#",scale = "melodic minor"))
 >Eb
+
+
+note1.play() plays the note through the speakers.
