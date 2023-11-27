@@ -61,6 +61,9 @@ class Note:
         return Note(self.name, duration=new_duration, dynamic=self.dynamic,
                     timbre=self.timbre)
 
+    def change_dynamic(self,new_dynamic):
+        return Note(self.name, duration=self.duration, dynamic=new_dynamic,
+                    timbre=self.timbre)
     def dominant(self,which = 0):
         return self.add(-5+which*12)
 
@@ -282,44 +285,38 @@ class Note:
             audio = audio + self.timbre[i]*np.sin((i+1)*self.frequency()*2*np.pi*time)
         audio = self.dynamic*audio
 
-
-
         sd.play(audio, samplerate=44100)
+        sd.wait()
 
 
 my_timbre = [1,0.5,0.1,0.1,0.1,0.3,0.05]
-note1 = Note("F#4",dynamic = 0.5,timbre=my_timbre)
+note1 = Note("Bb3",dynamic = 1,timbre=my_timbre)
 
-#tune of symphony no.9 down there
 
+#tune of tuba mirum - requiem by mozart down there
+
+note1.change_duration(3).play()
+note1.change_duration(3).add(-5).play()
+note1.add(4).play()
 note1.play()
-note1.play()
-note1.add(1).play()
-note1.add(3).play()
-note1.add(3).play()
-note1.add(1).play()
-note1.add(0).play()
-note1.add(-2).play()
-note1.add(-4).play()
-note1.add(-4).play()
-note1.add(-2).play()
-note1.add(0).play()
-note1.add(0).change_duration(1.5).play()
-note1.add(-2).change_duration(0.5).play()
-note1.add(-2).change_duration(2).play()
+note1.add(-5).play()
+note1.add(-8).play()
+note1.add(-12).change_duration(3).play()
+note1.change_dynamic(0).change_duration(3).play()
 
 note1.play()
+note1.major(1).play()
+note1.major(2).play()
+note1.add(10).play()
+note1.major(2).play()
+note1.major(1).play()
+note1.add(-2).play()
+note1.add(-3).play()
 note1.play()
-note1.add(1).play()
-note1.add(3).play()
-note1.add(3).play()
-note1.add(1).play()
-note1.add(0).play()
-note1.add(-2).play()
-note1.add(-4).play()
-note1.add(-4).play()
-note1.add(-2).play()
-note1.add(0).play()
-note1.add(-2).change_duration(1.5).play()
-note1.add(-4).change_duration(0.5).play()
-note1.add(-4).change_duration(2).play()
+note1.subdominant(which=1).play()
+note1.add(8).play()
+note1.dominant(which=1).play()
+note1.supertonic().play()
+note1.dominant(which=1).play()
+note1.subdominant(which=1).play()
+note1.major(1).change_duration(3).play()
