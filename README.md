@@ -11,7 +11,7 @@ timbre is a list of relative amplitudes of harmonics. The default timbre [1,0,0,
 
 you can start by creating a Note object:
 """
-
+```
 note = Note("A0")
 note.display()
 Name: A0 ,Duration: 1 ,MIDI number: 21 ,Note set: A
@@ -55,3 +55,4 @@ Name: D5 ,Duration: 1 ,MIDI number: 74 ,Note set: D
 Name: G4 ,Duration: 1 ,MIDI number: 67 ,Note set: G
 print(melody.tone())
 [('C', 'major'), ('F', 'major'), ('G', 'major'), ('Bb', 'major'), ('G', 'harmonic minor'), ('C', 'melodic minor'), ('G', 'melodic minor')]
+```
