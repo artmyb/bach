@@ -98,8 +98,11 @@ you can start by creating a Note object:
     ['FMaj', 'Am', 'DMaj7', 'FMaj7', 'Dm7', 'Am7', 'AmMaj7', 'D7', 'F7', 'F#dim', 'Adim', 'Amaug7', 'F#dim7', 'Adim7', 'CmM7', 'AmM7']
     
     intervals = ("unison","minor second","major second","minor third","major third", "perfect fourth","tritone","perfect fifth","minor sixth","major sixth","minor seventh", "major seventh", "octave")
-    consonances_in_octave = [Note.array(note1,note1-i).consonance()]
+    
+    consonances_in_octave = [Note.array(note1,note1-i).consonance() for i in range(12)]
+    
     sorted_indices = sorted(range(len(consonances_in_octave)), key=lambda k:consonances_in_octave[k])
+    
     for i in range(len(sorted_indices)):
         print(intervals[sorted_indices[len(sorted_indices)-i-1]])
     
