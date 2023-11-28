@@ -154,10 +154,7 @@ class Note:
                 return notes[-degree]
         else:
             difference = ((self+120)-Note(root+"0") )%12
-            print((self+120).name,Note(root+"0").name)
-            print(difference)
             root_note= self-difference
-            print(root_note.name,difference,degree)
             is_there = 0
             for i in range(12):
                 if root_note.chord(i,intervals = intervals).name == self.name:
@@ -167,7 +164,7 @@ class Note:
             if is_there == 0:
                 raise Exception("Note object is not in root note's chord.")
                 return
-            return root_note.chord(degree+difference)
+            return root_note.chord(degree = degree+difference,intervals = intervals)
 
     def M(self, degree=0, root=0): #major chord
         return self.chord(degree, root, (0, 4, 7))
@@ -242,7 +239,6 @@ class Note:
     class array:
         #a class to contain note(s)
         # initialize by my_notes = Notes.array([my_note,my_note2])
-        #this is an inner class. initialize by Note.array
         def __init__(self,note_list):
             self.size = len(note_list)
             self.list = note_list
@@ -255,7 +251,7 @@ class Note:
 
         def __len__(self):
             return len(self.list)
-        
+
         #below methods return the methods of every note, as a list
 
         def set(self):
@@ -313,7 +309,6 @@ class Note:
                 result = self.list
                 for i in range(other-1):
                     result = result + self.list
-                print("amk")
                 return Note.array(result)
             elif type(other) == int and other < 0:
                 result = [self[-i] for i in range(1,self.size+1)]
@@ -334,11 +329,9 @@ class Note:
                 tone_values = 12 * [1]
                 for i in self:
                     belongs = [(i-j).note_index() for j in Note.scales[scale]]
-                    print(belongs)
                     for k in range(len(tone_values)):
                         if k not in belongs:
                             tone_values[k] = 0
-                    print(tone_values)
                 if 1 in tone_values:
                     indexes = [item for item, x in enumerate(tone_values) if x == 1]
                     result = result+[(Note.sets[note],scale) for note in indexes]
