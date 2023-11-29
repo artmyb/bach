@@ -136,7 +136,7 @@ class Note:
         return self.change_duration(new_duration)
 
     def __rmul__(self, relative_duration):
-        if (type(relative_duration) != int or type(relative_duration) != float) or (relative_duration == 0 or relative_duration < 0):
+        if (type(relative_duration) != int and type(relative_duration) != float) or (relative_duration == 0 or relative_duration < 0):
             raise Exception("'relative_duration' parameter must be positive number.")
         new_duration = self.duration * relative_duration
         return self.change_duration(new_duration)
@@ -261,6 +261,9 @@ class Note:
         return self.chord(degree, root, Note.chords["dim7"])
 
     def add(self,add=1,tone = None, scale = "major"):
+        # returns a shift of the input note within a scale.
+        # default scale is the major scale of the input note.
+        # tone parameter must be a note name without octave indicator. ("C", "Ab",...)
         if tone == "Db":
             tone = "C#"
         if tone == "D#":
@@ -278,9 +281,6 @@ class Note:
             for i in list(Note.scales.keys()):
                 str += ", "+i
             raise Exception("'scale' parameter must be one of the following:",str)
-        # returns a shift of the input note within a scale.
-        # default scale is the major scale of the input note.
-        # tone parameter must be a note name without octave indicator. ("C", "Ab",...)
         mainnote_octave = self.octave()
         mainset = self.name1.replace(str(mainnote_octave), "")
         if tone is None:
@@ -409,21 +409,68 @@ class Note:
         def __neg__(self):
             return self.__mul__(-1)
 
-        def tone(self): #returns a list of pairs that contain the possible tone of a given note array
+        def sort(self,mode = "duration",reverse = False):
+            if mode == "duration":
+                attributes = [i.duration for i in self]
+                sorted_index = sorted(range(self.size), key = lambda k: attributes[k],reverse=reverse)
+                return Note.array([self[i] for i in sorted_index])
+            elif mode == "pitch":
+                attributes = [i.key() for i in self]
+                sorted_index = sorted(range(self.size), key=lambda k: attributes[k], reverse=reverse)
+                return Note.array([self[i] for i in sorted_index])
+            elif mode == "dynamic":
+                attributes = [i.dynamic for i in self]
+                sorted_index = sorted(range(self.size), key=lambda k: attributes[k], reverse=reverse)
+                return Note.array([self[i] for i in sorted_index])
+            else:
+                raise Exception("'mode' parameter must be one of the following: 'duration', 'pitch', 'dynamic'")
+
+        def tone(self,aslist=True,probabilistic = False,probability_base = 2):
+            # returns a list of pairs that contain the possible tone of a given note array
+            # if probabilistic == False, any note within the array that is out of a tone will exclude that tone from the result
+            # else, the duration of the notes will affect the result:
+            #   if all the notes are included in the scale, the third value, probability parameter, of the tuple within result is going to be 1.
+            #   if there are notes that are not included in the scale, probability parameter is going to be < 1.
+            #   duration of the notes mentioned in the previous line will determine how smaller than 1 the probability paremeter will be.
+            #   the result is a list of tuples, sorted according to probability parameter. (tonal center, scale, probablity parameter)
             result = []
+            if type(aslist) != bool:
+                raise Exception("'aslist' parameter must be a boolean.")
+            if type(probabilistic) != bool:
+                raise Exception("'probabilistic' parameter must be a boolean.")
             for scale in list(Note.scales.keys()):
                 tone_values = 12 * [1]
                 for i in self:
-                    belongs = [(i-j).note_index() for j in Note.scales[scale]]
+                    belongs = [(i - j).note_index() for j in Note.scales[scale]]
                     for k in range(len(tone_values)):
                         if k not in belongs:
-                            tone_values[k] = 0
-                if 1 in tone_values:
-                    indexes = [item for item, x in enumerate(tone_values) if x == 1]
-                    result = result+[(Note.sets[note],scale) for note in indexes]
-            return result
+                            if probabilistic == False:
+                                tone_values[k] = 0
+                            else:
+                                tone_values[k] *= probability_base**(-i.duration)
+                if probabilistic == False:
+                    if 1 in tone_values:
+                        indexes = [item for item, x in enumerate(tone_values) if x == 1]
+                        if aslist == False:
+                            result = result + [(Note.sets[note], scale) for note in indexes]
+                        else:
+                            result = result + [(Note.sets[note]+" "+scale) for note in indexes]
+                else:
+                    if aslist == False:
+                        result.append([[Note.sets[i]+" "+scale, tone_values[i]] for i in range(12)])
+                        x = 1
+                    else:
+                        result.append([(Note.sets[i],scale, tone_values[i]) for i in range(12)])
+                        x = 2
+            results = []
+            for i in result:
+                for j in i:
+                    results.append(j)
+            results = sorted(results, key= lambda k: k[x], reverse=True)
+            #print(result[0][0])
+            return results
 
-        def root(self,aslist=False): #returns the chords to which the notes belong, as string
+        def root(self,aslist=True): #returns the chords to which the notes belong, as string
             # aslist = False return conventional chord names like CM7
             # aslist = True returns pairs whose first index is the root note (string), the second index is chord type
             result = []
@@ -449,14 +496,15 @@ class Note:
             the algorithm is a calculation of how well the notes fit together within any harmonic series.
 
             according to this algorithm, the rank of consonance within an octave;
-                with the upper note held constant:
-                unison, octave, perfect fifth, perfect fourth, major sixth, major third, minor third, minor seventh, tritone, minor sixth, major second, major seventh, minor second
-                with the lower note held constant:
-                octave, unison, perfect fifth, major sixth, perfect fourth, minor seventh, major third, minor sixth, tritone, minor third, major seventh, major second, minor second
+
+            with the upper note held constant:
+            unison, octave, perfect fifth, perfect fourth, major sixth, major third, minor third, minor seventh, tritone, minor sixth, major second, major seventh, minor second
+
+            with the lower note held constant:
+            octave, unison, perfect fifth, major sixth, perfect fourth, minor seventh, major third, minor sixth, tritone, minor third, major seventh, major second, minor second
             """
             keys = [i.key() for i in self]
             sep = max(keys) - min(keys)
-            print(sep)
             subharmonics = [[j.subharmonic(i).key() for i in range(1,sep+20+1)] for j in self]
             for i in range(sep+20):
                 for j in range(1,len(subharmonics)):
@@ -467,7 +515,3 @@ class Note:
                             found = False
                         if found == True:
                             return current
-
-
-
-
