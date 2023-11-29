@@ -120,3 +120,25 @@ you can start by creating a Note object:
     major seventh
     minor second
 
+    A = Note("A5")
+    C_sharp,D_sharp = A+4,A+6
+    notes = Note.array([A,C_sharp,D_sharp])
+    print(notes.tone())
+    
+    [('E', 'major'), ('C#', 'natural minor'), ('C#', 'harmonic minor'), ('Bb', 'harmonic minor'), ('E', 'melodic minor'), ('F#', 'melodic minor'), ('Bb', 'melodic minor')]
+    
+    print(notes.root())
+    
+    [('B', 'Maj9'), ('Eb', 'dim7'), ('F#', 'mM7')]
+    
+    print(notes.root(aslist=False))
+    
+    ['BMaj9', 'Ebdim7', 'F#mM7']
+    
+    print(notes.tone(probabilistic = True))
+    
+    [('E', 'major', 0.10558547143913011), ('C#', 'natural minor', 0.10558547143913011), ('C#', 'harmonic minor', 0.10558547143913011), ('Bb', 'harmonic minor', 0.10558547143913011), ('E', 'melodic minor', 0.10558547143913011), ('F#', 'melodic minor', 0.10558547143913011),.....]
+    
+    print(notes.root(probabilistic = True))
+    
+    [('B', 'Maj9', 0.025), ('Eb', 'dim7', 0.025), ('F#', 'mM7', 0.025), ('A', 'Maj', 0.0125), ('F#', 'm', 0.0125), ('Eb', 'Maj7', 0.0125), ('F', 'Maj7', 0.0125), ('A', 'Maj7', 0.0125), ('B', 'Maj7', 0.0125), ('Eb', 'm7', 0.0125), ('F#', 'm7', 0.0125), ('D', 'mMaj7', 0.0125),.....]
