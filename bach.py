@@ -20,6 +20,7 @@ class Note:
     sets = CircularList(("C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"))
     fifths = CircularList(("C","G","D","A","E","B","F#","C#","Ab","Eb","Bb","F"))
     scales = {"major":(0,2,4,5,7,9,11,12),
+              "natural minor": (0, 2, 3, 5, 7, 8, 10, 12),
               "harmonic minor":(0, 2, 3, 5, 7, 8, 11, 12),
               "melodic minor":(0, 2, 3, 5, 7, 9, 11, 12)}
     chords = {"Maj":(0,4,7),
@@ -452,9 +453,9 @@ class Note:
                     if 1 in tone_values:
                         indexes = [item for item, x in enumerate(tone_values) if x == 1]
                         if aslist == False:
-                            result = result + [(Note.sets[note], scale) for note in indexes]
+                            result = result + [(Note.sets[note] + " " + scale) for note in indexes]
                         else:
-                            result = result + [(Note.sets[note]+" "+scale) for note in indexes]
+                            result = result + [(Note.sets[note], scale) for note in indexes]
                 else:
                     if aslist == False:
                         result.append([[Note.sets[i]+" "+scale, tone_values[i]] for i in range(12)])
@@ -462,13 +463,14 @@ class Note:
                     else:
                         result.append([(Note.sets[i],scale, tone_values[i]) for i in range(12)])
                         x = 2
-            results = []
-            for i in result:
-                for j in i:
-                    results.append(j)
-            results = sorted(results, key= lambda k: k[x], reverse=True)
-            #print(result[0][0])
-            return results
+            if probabilistic == True:
+                results = []
+                for i in result:
+                    for j in i:
+                        results.append(j)
+                results = sorted(results, key= lambda k: k[x], reverse=True)
+                result = results
+            return result
 
         def root(self,aslist=True): #returns the chords to which the notes belong, as string
             # aslist = False return conventional chord names like CM7
