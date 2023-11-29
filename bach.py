@@ -28,6 +28,7 @@ class Note:
               "Maj7": (0, 4, 7, 10),
               "m7": (0, 3, 7, 10),
               "mMaj7": (0, 3, 7, 11),
+              "Maj9": (0, 4, 7, 10, 14),
               "7": (0,4,7,10),
               "dim": (0,3,6),
               "aug":(0,4,8),
@@ -426,7 +427,7 @@ class Note:
             else:
                 raise Exception("'mode' parameter must be one of the following: 'duration', 'pitch', 'dynamic'")
 
-        def tone(self,aslist=True,probabilistic = False,probability_base = 10, scales = 0):
+        def tone(self,aslist=True,probabilistic = False,probability_base = 10, scales = 0, hidden = 0):
             # returns a list of pairs that contain the possible tone of a given note array
             # if probabilistic == False, any note within the array that is out of a tone will exclude that tone from the result
             # else, the duration of the notes will affect the result:
@@ -439,6 +440,10 @@ class Note:
                 raise Exception("'aslist' parameter must be a boolean.")
             if type(probabilistic) != bool:
                 raise Exception("'probabilistic' parameter must be a boolean.")
+            if hidden == 1:
+                space = ""
+            else:
+                space = " "
             for scale in list(scales.keys()):
                 tone_values = 12 * [1]
                 for i in self:
@@ -453,12 +458,12 @@ class Note:
                     if 1 in tone_values:
                         indexes = [item for item, x in enumerate(tone_values) if x == 1]
                         if aslist == False:
-                            result = result + [(scales[note] + " " + scale) for note in indexes]
+                            result = result + [(Note.sets[note] + space + scale) for note in indexes]
                         else:
-                            result = result + [(scales[note], scale) for note in indexes]
+                            result = result + [(Note.sets[note], scale) for note in indexes]
                 else:
                     if aslist == False:
-                        result.append([[Note.sets[i]+" "+scale, tone_values[i]] for i in range(12)])
+                        result.append([[Note.sets[i]+space+scale, tone_values[i]] for i in range(12)])
                         x = 1
                     else:
                         result.append([(Note.sets[i],scale, tone_values[i]) for i in range(12)])
@@ -482,7 +487,7 @@ class Note:
             # aslist = True returns pairs whose first index is the root note (string), the second index is chord type
             if chords == 0:
                 chords = Note.chords
-            result = self.tone(aslist=aslist,probabilistic=probabilistic,probability_base=probability_base,scales=chords)
+            result = self.tone(aslist=aslist,probabilistic=probabilistic,probability_base=probability_base,scales=chords, hidden = 1)
             return result
 
         def consonance(self,n=1): #gives consonance value between multiple notes as an integer
@@ -511,6 +516,7 @@ class Note:
                             found = False
                         if found == True:
                             return current
+
 
 
 
