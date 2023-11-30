@@ -7,6 +7,7 @@ my_note = Note("A4")
 """
 import numpy as np
 import sounddevice as sd
+import types
 
 
 class Note:
@@ -20,7 +21,6 @@ class Note:
     sets = CircularList(("C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"))
     fifths = CircularList(("C","G","D","A","E","B","F#","C#","Ab","Eb","Bb","F"))
     scales = {"major":(0,2,4,5,7,9,11,12),
-              "natural minor": (0, 2, 3, 5, 7, 8, 10, 12),
               "harmonic minor":(0, 2, 3, 5, 7, 8, 11, 12),
               "melodic minor":(0, 2, 3, 5, 7, 9, 11, 12)}
     chords = {"Maj":(0,4,7),
@@ -36,24 +36,23 @@ class Note:
               "dim7": (0,3,6,10),
               "mM7":(0,3,7,9)}
 
-
     @staticmethod
-    def bykey(key):
+    def bykey(key,duration=1,dynamic=0.25,timbre=[1]):
         #creates a note object by MIDI number
         octave = key//12 -1
         index = key % 12
         name_set = Note.sets[index]
         name = name_set+str(octave)
-        return Note(name)
+        return Note(name,duration=duration,dynamic=dynamic,timbre=timbre)
 
     @staticmethod
-    def byfreq(frequency):
+    def byfreq(frequency,duration=1,dynamic=0.25,timbre=[1]):
         #created a Note object by a frequency
         key = 69+12*np.log(frequency/440)/np.log(2)
-        return Note.bykey(round(key))
+        return Note.bykey(round(key),duration=duration,dynamic=dynamic,timbre=timbre)
 
-    def __init__(self,name,duration=1,dynamic=0.25,timbre=[1]+50*[0]):
-        #timbre is the relative amplitudes of the harmonics. default timbre [1,0,0,0,...] representts a sinusoidal.
+    def __init__(self,name,duration=1,dynamic=0.25,timbre=[1]):
+        #timbre is the relative amplitudes of the harmonics. default timbre [1] representts a sinusoidal.
         self.name = name
         self.duration = duration
         self.dynamic = dynamic
@@ -69,7 +68,6 @@ class Note:
             self.name1 = self.name1.replace("G#", "Ab")
         if "A#" in self.name:
             self.name1 = self.name1.replace("A#","Bb")
-
 
     def set(self):
         #returns the name of the note without octave indicator (  A4 = Note("A4), A4.set() = "A" )
@@ -103,18 +101,20 @@ class Note:
     def add1(self,semitone=1):
         if type(semitone) != int:
             raise Exception("'semitone' parameter must be an integer.")
-        return Note.bykey(self.key()+semitone)
+        return Note.bykey(self.key()+semitone,duration=self.duration,dynamic=self.dynamic,timbre=self.timbre)
 
-    def __add__(self,semitone):
+    def __add__(self,other):
         #adding an integer and a note returns a note that is that integerx(semi-tone) above the original note.
-        if type(semitone) != int:
-            raise Exception("'semitone' parameter must be an integer.")
-        return self.add1(semitone)
+        if type(other) == int:
+            return self.add1(other)
+        if type(other) == Note:
+            return Note.array([self,other])
 
-    def __radd__(self,semitone):
-        if type(semitone) != int:
-            raise Exception("'semitone' parameter must be an integer.")
-        return self.add1(semitone)
+    def __radd__(self,other):
+        if type(other) == int:
+            return self.add1(other)
+        if type(other) == Note:
+            return Note.array([other,self])
 
     def change_duration(self,new_duration):
         return Note(self.name1, duration=new_duration, dynamic=self.dynamic,
@@ -146,6 +146,11 @@ class Note:
     def change_dynamic(self,new_dynamic):
         return Note(self.name1, duration=self.duration, dynamic=new_dynamic,
                     timbre=self.timbre)
+
+    def f(self):
+        return Note(self.name1, duration=self.duration, dynamic=3*self.dynamic,
+                    timbre=self.timbre)
+
 
     def dominant(self,which = 0):
         if type(which) != int:
@@ -311,17 +316,36 @@ class Note:
         else:
             return self.chord(degree=add, root=root, intervals=scale)
 
+
+
     def display(self):
         print("Name:",self.name1,",Duration:",self.duration,",MIDI number:",self.key(),",Note set:",self.set())
 
-    def play(self,tempo = 120, sample_rate=44100):
-        #obvious...
-        time = np.arange(0,(self.duration*60/tempo),1/sample_rate)
-        audio = np.array(time.size*[0], dtype=np.int16)
+    def wave(self, tempo = 120, sample_rate = 44100, fade_time = 0.05):
+        time = np.arange(0, (self.duration * 60 / tempo), 1 / sample_rate)
+        audio = np.array(time.size * [0], dtype=np.int16)
         for i in range(len(self.timbre)):
-            audio = audio + self.timbre[i]*np.sin((i+1)*self.frequency()*2*np.pi*time)
-        audio = self.dynamic*audio
+            audio = audio + self.timbre[i] * np.sin((i + 1) * self.frequency() * 2 * np.pi * time)
+        audio = self.dynamic * audio
+        def fadeout(n):
+            t = np.linspace(0, np.pi, n)
+            return 0.5*(1 + np.cos(t))
+        def fadein(n):
+            t = np.linspace(np.pi, 2 * np.pi, n)
+            return 0.5*(1 + np.cos(t))
 
+        fadein_length = int(fade_time*time.size)
+        fadeout_length = int(fade_time*time.size)
+
+        unity = np.array((audio.size-fadeout_length-fadeout_length) * [1], dtype=np.int16)
+
+        unity = np.append(fadein(fadein_length),unity)
+        unity = np.append(unity,fadeout(fadeout_length))
+
+        return audio*unity
+
+    def play(self,tempo = 120, sample_rate=44100):
+        audio = self.wave(tempo, sample_rate = sample_rate)
         sd.play(audio, samplerate=44100)
         sd.wait()
 
@@ -333,7 +357,12 @@ class Note:
             self.list = note_list
 
         def __getitem__(self,index):
-            return self.list[index]
+            if isinstance(index, int):
+                return self.list[index]
+            elif isinstance(index, slice):
+                return Note.array(self.list[index])
+            else:
+                raise TypeError("Index must be integer or slice.")
 
         def __setitem__(self, index, value):
             self.list[index] = value
@@ -354,13 +383,13 @@ class Note:
 
         def transpose(self, semitone = 1):
             #transposes all the notes by semitone input.
-            return [i.add1(semitone) for i in self]
+            return Note.array([i.add1(semitone) for i in self])
 
         def change_duration(self,new_duration):
-            return [i.change_duration(new_duration) for i in self]
+            return Note.array(i.change_duration(new_duration) for i in self)
 
         def change_dynamic(self,new_dynamic):
-            return [i.change_dynamic(new_dynamic) for i in self]
+            return Note.array(i.change_dynamic(new_dynamic) for i in self)
 
         def display(self):
             for i in self:
@@ -410,6 +439,12 @@ class Note:
 
         def __neg__(self):
             return self.__mul__(-1)
+
+        def duration(self):
+            total = 0
+            for i in self:
+                total += i.duration()
+            return total
 
         def sort(self,mode = "duration",reverse = False):
             if mode == "duration":
@@ -518,6 +553,153 @@ class Note:
                             return current
 
 
+        def wave(self, tempo = 120, sample_rate=44100, fade_time = 0.05):
+            wave1 = np.array([])
+            for i in self:
+                wave1 = np.append(wave1,i.wave(tempo = tempo, sample_rate=sample_rate, fade_time = fade_time))
+            return wave1
 
+        def play(self, tempo=120, sample_rate=44100):
+            audio = self.wave(tempo= tempo, sample_rate=sample_rate)
+            sd.play(audio, samplerate=44100)
+            sd.wait()
 
+        class poly: #class to store note arrays.
+            def __init__(self,arrays):
+                self.size = len(arrays)
+                self.list = arrays
 
+            def __getitem__(self, index):
+                if isinstance(index, int):
+                    return self.list[index]
+                elif isinstance(index, slice):
+                    return Note.array.poly(self.list[index])
+                else:
+                    raise TypeError("Index must be integer or slice.")
+
+            def __setitem__(self, index, value):
+                self.list[index] = value
+
+            def __len__(self):
+                return len(self.list)
+
+            def transpose(self, semitone=1):
+                # transposes all the notes by semitone input.
+                return Note.array.poly([i.transpose(semitone) for i in self])
+
+            def change_duration(self, new_duration):
+                return Note.array.poly(i.change_duration(new_duration) for i in self)
+
+            def change_dynamic(self, new_dynamic):
+                return Note.array.poly(i.change_dynamic(new_dynamic) for i in self)
+
+            def __add__(self,other):
+                if type(other) == int:
+                    return self.transpose(other)
+                elif type(other) == Note.array:
+                    return Note.array.poly(self.list.append(other))
+                elif type(other) == Note.array.poly:
+                    return Note.array.poly(self.list + other.list)
+
+            def __radd__(self, other):
+                if type(other) == int:
+                    return self.transpose(other)
+                elif type(other) == Note.array:
+                    return Note.array.poly([other]+self.list)
+                elif type(other) == Note.array.poly:
+                    return Note.array.poly(other.list+ self.list)
+
+            def __mul__(self,other):
+                if type(other) == int:
+                    return Note.array.poly([other*i for i in self.list])
+
+            def __rmul__(self,other):
+                if type(other) == int:
+                    return Note.array.poly([other*i for i in self.list])
+
+            def __sub__(self, other):
+                if type(other) == int:
+                    return self.transpose(-other)
+                return
+
+            def duration(self):
+                max = 0
+                for i in self:
+                    if i.duration() > max:
+                        max = i.duration()
+                return max
+
+            def wave(self, tempo=120, sample_rate=44100, fade_time = 0.05):
+                v1 = self[0].wave(tempo=tempo,sample_rate = sample_rate, fade_time = fade_time)
+                for i in range(1,self.size):
+                    v2 = self[i].wave(tempo=tempo,sample_rate = sample_rate, fade_time = fade_time)
+                    if len(v1) < len(v2):
+                        res = v2.copy()
+                        res[:len(v1)] += v1
+                    else:
+                        res = v1.copy()
+                        res[:len(v2)] += v2
+                    v1 = res
+                return v1
+
+            def play(self, tempo=120, sample_rate=44100):
+                audio = self.wave(tempo=tempo, sample_rate=sample_rate)
+                sd.play(audio, samplerate=44100)
+                sd.wait()
+
+            def tone(self, aslist=True, probabilistic=False, probability_base=10, scales=0, hidden=0):
+                # returns a list of pairs that contain the possible tone of a given note array
+                # if probabilistic == False, any note within the array that is out of a tone will exclude that tone from the result
+                # else, the duration of the notes will affect the result:
+                #   the longer a note ise, the higher the probability parameter of the tones it might belong well be.
+                #   the result is a list of tuples, sorted according to probability parameter. (tonal center, scale, probablity parameter)
+                if scales == 0:
+                    scales = Note.scales
+                result = []
+                if type(aslist) != bool:
+                    raise Exception("'aslist' parameter must be a boolean.")
+                if type(probabilistic) != bool:
+                    raise Exception("'probabilistic' parameter must be a boolean.")
+                if hidden == 1:
+                    space = ""
+                else:
+                    space = " "
+                for scale in list(scales.keys()):
+                    tone_values = 12 * [1]
+                    for j in self:
+                        for i in j:
+                            belongs = [(i - j).note_index() for j in scales[scale]]
+                            for k in range(len(tone_values)):
+                                if k not in belongs:
+                                    if probabilistic == False:
+                                        tone_values[k] = 0
+                                    else:
+                                        tone_values[k] *= probability_base ** (-i.duration-i.dynamic**2)
+                    if probabilistic == False:
+                        if 1 in tone_values:
+                            indexes = [item for item, x in enumerate(tone_values) if x == 1]
+                            if aslist == False:
+                                result = result + [(Note.sets[note] + space + scale) for note in indexes]
+                            else:
+                                result = result + [(Note.sets[note], scale) for note in indexes]
+                    else:
+                        if aslist == False:
+                            result.append([[Note.sets[i] + space + scale, tone_values[i]] for i in range(12)])
+                            x = 1
+                        else:
+                            result.append([(Note.sets[i], scale, tone_values[i]) for i in range(12)])
+                            x = 2
+                if probabilistic == True:
+                    results = []
+                    for i in result:
+                        for j in i:
+                            results.append(j)
+                    results = sorted(results, key=lambda k: k[x], reverse=True)
+                    normalize = [i[x] for i in results]
+                    normalize = sum(normalize)
+                    if aslist == True:
+                        result = [(i[0], i[1], i[2] / normalize) for i in results]
+                    else:
+                        result = [(i[0], i[1] / normalize) for i in results]
+                return result
+Note.es = Note("C0",dynamic = 0)
