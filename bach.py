@@ -109,6 +109,8 @@ class Note:
             return self.add1(other)
         if type(other) == Note:
             return Note.array([self,other])
+        if type(other) == Note.array:
+            return Note.array([self]+other.list)
 
     def __radd__(self,other):
         if type(other) == int:
@@ -443,7 +445,7 @@ class Note:
         def duration(self):
             total = 0
             for i in self:
-                total += i.duration()
+                total += i.duration
             return total
 
         def sort(self,mode = "duration",reverse = False):
@@ -484,11 +486,11 @@ class Note:
                 for i in self:
                     belongs = [(i - j).note_index() for j in scales[scale]]
                     for k in range(len(tone_values)):
-                        if k not in belongs:
+                        if k not in belongs and i.dynamic != 0:
                             if probabilistic == False:
                                 tone_values[k] = 0
                             else:
-                                tone_values[k] *= probability_base**(-i.duration)
+                                tone_values[k] *= probability_base**(-i.duration*i.dynamic**0.25)
                 if probabilistic == False:
                     if 1 in tone_values:
                         indexes = [item for item, x in enumerate(tone_values) if x == 1]
@@ -631,15 +633,16 @@ class Note:
 
             def wave(self, tempo=120, sample_rate=44100, fade_time = 0.05):
                 v1 = self[0].wave(tempo=tempo,sample_rate = sample_rate, fade_time = fade_time)
-                for i in range(1,self.size):
-                    v2 = self[i].wave(tempo=tempo,sample_rate = sample_rate, fade_time = fade_time)
-                    if len(v1) < len(v2):
-                        res = v2.copy()
-                        res[:len(v1)] += v1
-                    else:
-                        res = v1.copy()
-                        res[:len(v2)] += v2
-                    v1 = res
+                if self.size > 1:
+                    for i in range(1,self.size):
+                        v2 = self[i].wave(tempo=tempo,sample_rate = sample_rate, fade_time = fade_time)
+                        if len(v1) < len(v2):
+                            res = v2.copy()
+                            res[:len(v1)] += v1
+                        else:
+                            res = v1.copy()
+                            res[:len(v2)] += v2
+                        v1 = res
                 return v1
 
             def play(self, tempo=120, sample_rate=44100):
@@ -671,10 +674,10 @@ class Note:
                             belongs = [(i - j).note_index() for j in scales[scale]]
                             for k in range(len(tone_values)):
                                 if k not in belongs:
-                                    if probabilistic == False:
+                                    if probabilistic == False and i.dynamic != 0:
                                         tone_values[k] = 0
                                     else:
-                                        tone_values[k] *= probability_base ** (-i.duration-i.dynamic**2)
+                                        tone_values[k] *= probability_base ** (-i.duration*i.dynamic**0.25)
                     if probabilistic == False:
                         if 1 in tone_values:
                             indexes = [item for item, x in enumerate(tone_values) if x == 1]
