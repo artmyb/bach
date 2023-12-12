@@ -134,13 +134,13 @@ class Note:
 
     def __mul__(self, relative_duration):
         #multiplying the note by a number multiplies the duration of it
-        if (type(relative_duration) != int or type(relative_duration) != float) or (relative_duration == 0 or relative_duration < 0):
+        if (type(relative_duration) != int and type(relative_duration) != float) or (relative_duration == 0 and relative_duration < 0):
             raise Exception("'relative_duration' parameter must be positive number.")
         new_duration = self.duration * relative_duration
         return self.change_duration(new_duration)
 
     def __rmul__(self, relative_duration):
-        if (type(relative_duration) != int and type(relative_duration) != float) or (relative_duration == 0 or relative_duration < 0):
+        if (type(relative_duration) != int and type(relative_duration) != float) or (relative_duration == 0 and relative_duration < 0):
             raise Exception("'relative_duration' parameter must be positive number.")
         new_duration = self.duration * relative_duration
         return self.change_duration(new_duration)
@@ -183,16 +183,17 @@ class Note:
         return self.harmonic(1/n)
 
     def chord(self,degree=0,root=0,intervals = (0,4,7)):
-        if "Db" in root:
-            root = root.replace("Db", "C#")
-        if "D#" in root:
-            root = root.replace("D#", "Eb")
-        if "Gb" in root:
-            root = root.replace("Gb", "F#")
-        if "G#" in root:
-            root = root.replace("G#", "Ab")
-        if "A#" in root:
-            root = root.replace("A#", "Bb")
+        if root != 0:
+            if "Db" in root:
+                root = root.replace("Db", "C#")
+            if "D#" in root:
+                root = root.replace("D#", "Eb")
+            if "Gb" in root:
+                root = root.replace("Gb", "F#")
+            if "G#" in root:
+                root = root.replace("G#", "Ab")
+            if "A#" in root:
+                root = root.replace("A#", "Bb")
         if type(degree) != int:
             raise Exception("'degree' parameter must be integer.")
         try:
@@ -273,6 +274,8 @@ class Note:
         # returns a shift of the input note within a scale.
         # default scale is the major scale of the input note.
         # tone parameter must be a note name without octave indicator. ("C", "Ab",...)
+        if self.dynamic == 0:
+            return self
         if tone == "Db":
             tone = "C#"
         if tone == "D#":
@@ -286,12 +289,12 @@ class Note:
         if type(add) != int:
             raise Exception("'add' parameter must be integer.")
         if scale not in list(Note.scales.keys()):
-            str = ""
+            string = ""
             for i in list(Note.scales.keys()):
-                str += ", "+i
-            raise Exception("'scale' parameter must be one of the following:",str)
+                string += ", "+i
+            raise Exception("'scale' parameter must be one of the following:",string)
         mainnote_octave = self.octave()
-        mainset = self.name1.replace(str(mainnote_octave), "")
+        mainset = self.name1.replace( str(mainnote_octave), "")
         if tone is None:
             tone = mainset
             root = 0
@@ -388,10 +391,10 @@ class Note:
             return Note.array([i.add1(semitone) for i in self])
 
         def change_duration(self,new_duration):
-            return Note.array(i.change_duration(new_duration) for i in self)
+            return Note.array([i.change_duration(new_duration) for i in self])
 
         def change_dynamic(self,new_dynamic):
-            return Note.array(i.change_dynamic(new_dynamic) for i in self)
+            return Note.array([i.change_dynamic(new_dynamic) for i in self])
 
         def display(self):
             for i in self:
@@ -447,6 +450,9 @@ class Note:
             for i in self:
                 total += i.duration
             return total
+
+        def add(self,add=1,tone = None, scale = "major"):
+            return Note.array([i.add(add=add,tone=tone,scale=scale) for i in self])
 
         def sort(self,mode = "duration",reverse = False):
             if mode == "duration":
@@ -590,10 +596,10 @@ class Note:
                 return Note.array.poly([i.transpose(semitone) for i in self])
 
             def change_duration(self, new_duration):
-                return Note.array.poly(i.change_duration(new_duration) for i in self)
+                return Note.array.poly([i.change_duration(new_duration) for i in self])
 
             def change_dynamic(self, new_dynamic):
-                return Note.array.poly(i.change_dynamic(new_dynamic) for i in self)
+                return Note.array.poly([i.change_dynamic(new_dynamic) for i in self])
 
             def __add__(self,other):
                 if type(other) == int:
@@ -630,6 +636,9 @@ class Note:
                     if i.duration() > max:
                         max = i.duration()
                 return max
+
+            def add(self, add=1, tone=None, scale="major"):
+                return Note.array.poly([i.add(add=add, tone=tone,scale=scale) for i in self])
 
             def wave(self, tempo=120, sample_rate=44100, fade_time = 0.05):
                 v1 = self[0].wave(tempo=tempo,sample_rate = sample_rate, fade_time = fade_time)
