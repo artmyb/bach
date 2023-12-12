@@ -326,31 +326,32 @@ class Note:
     def display(self):
         print("Name:",self.name1,",Duration:",self.duration,",MIDI number:",self.key(),",Note set:",self.set())
 
-    def wave(self, tempo = 120, sample_rate = 44100, fade_time = 0.05):
+    def wave(self, tempo = 120, sample_rate = 44100, fadein = 0.05, fadeout = 0.05, damp = 0):
         time = np.arange(0, (self.duration * 60 / tempo), 1 / sample_rate)
         audio = np.array(time.size * [0], dtype=np.int16)
         for i in range(len(self.timbre)):
             audio = audio + self.timbre[i] * np.sin((i + 1) * self.frequency() * 2 * np.pi * time)
-        audio = self.dynamic * audio
-        def fadeout(n):
+
+        audio = self.dynamic * audio *np.exp(-time*damp)
+        def fade_out(n):
             t = np.linspace(0, np.pi, n)
             return 0.5*(1 + np.cos(t))
-        def fadein(n):
+        def fade_in(n):
             t = np.linspace(np.pi, 2 * np.pi, n)
             return 0.5*(1 + np.cos(t))
 
-        fadein_length = int(fade_time*time.size)
-        fadeout_length = int(fade_time*time.size)
+        fadein_length = int(fadein*time.size)
+        fadeout_length = int(fadeout*time.size)
 
-        unity = np.array((audio.size-fadeout_length-fadeout_length) * [1], dtype=np.int16)
+        unity = np.array((audio.size-fadeout_length-fadein_length) * [1], dtype=np.int16)
 
-        unity = np.append(fadein(fadein_length),unity)
-        unity = np.append(unity,fadeout(fadeout_length))
+        unity = np.append(fade_in(fadein_length),unity)
+        unity = np.append(unity,fade_out(fadeout_length))
 
         return audio*unity
 
-    def play(self,tempo = 120, sample_rate=44100):
-        audio = self.wave(tempo, sample_rate = sample_rate)
+    def play(self,tempo = 120, sample_rate=44100, fadein = 0.05, fadeout = 0.05, damp = 0):
+        audio = self.wave(tempo, sample_rate = sample_rate, fadein = fadein, fadeout = fadeout, damp = damp)
         sd.play(audio, samplerate=44100)
         sd.wait()
 
@@ -561,14 +562,14 @@ class Note:
                             return current
 
 
-        def wave(self, tempo = 120, sample_rate=44100, fade_time = 0.05):
+        def wave(self, tempo = 120, sample_rate=44100, fadein = 0.05, fadeout = 0.05,damp = 0):
             wave1 = np.array([])
             for i in self:
-                wave1 = np.append(wave1,i.wave(tempo = tempo, sample_rate=sample_rate, fade_time = fade_time))
+                wave1 = np.append(wave1,i.wave(tempo = tempo, sample_rate=sample_rate, fadein = fadein, fadeout = fadeout,damp = damp))
             return wave1
 
-        def play(self, tempo=120, sample_rate=44100):
-            audio = self.wave(tempo= tempo, sample_rate=sample_rate)
+        def play(self, tempo=120, sample_rate=44100, fadein = 0.05, fadeout = 0.05, damp = 0):
+            audio = self.wave(tempo= tempo, sample_rate=sample_rate, fadein = fadein, fadeout = fadeout, damp = damp)
             sd.play(audio, samplerate=44100)
             sd.wait()
 
@@ -640,11 +641,11 @@ class Note:
             def add(self, add=1, tone=None, scale="major"):
                 return Note.array.poly([i.add(add=add, tone=tone,scale=scale) for i in self])
 
-            def wave(self, tempo=120, sample_rate=44100, fade_time = 0.05):
-                v1 = self[0].wave(tempo=tempo,sample_rate = sample_rate, fade_time = fade_time)
+            def wave(self, tempo=120, sample_rate=44100, fadein = 0.05, fadeout = 0.05, damp = 0):
+                v1 = self[0].wave(tempo=tempo,sample_rate = sample_rate,fadein = fadein, fadeout = fadeout,damp = damp)
                 if self.size > 1:
                     for i in range(1,self.size):
-                        v2 = self[i].wave(tempo=tempo,sample_rate = sample_rate, fade_time = fade_time)
+                        v2 = self[i].wave(tempo=tempo,sample_rate = sample_rate, fadein = fadein, fadeout = fadeout, damp = damp)
                         if len(v1) < len(v2):
                             res = v2.copy()
                             res[:len(v1)] += v1
@@ -654,8 +655,8 @@ class Note:
                         v1 = res
                 return v1
 
-            def play(self, tempo=120, sample_rate=44100):
-                audio = self.wave(tempo=tempo, sample_rate=sample_rate)
+            def play(self, tempo=120, sample_rate=44100, fadein = 0.05, fadeout = 0.05, damp = 0):
+                audio = self.wave(tempo=tempo, sample_rate=sample_rate, fadein = fadein, fadeout = fadeout, damp = damp)
                 sd.play(audio, samplerate=44100)
                 sd.wait()
 
